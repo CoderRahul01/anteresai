@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { 
   Sparkles,
@@ -10,7 +10,9 @@ import {
   Newspaper,
   BookOpen,
   Copy,
-  CheckCircle2 
+  CheckCircle2,
+  Linkedin,
+  ExternalLink
 } from 'lucide-react';
 
 export default function AnteresDashboard() {
@@ -20,6 +22,51 @@ export default function AnteresDashboard() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [results, setResults] = useState<any[] | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [linkedinConnected, setLinkedinConnected] = useState(false);
+  const [linkedinName, setLinkedinName] = useState<string | null>(null);
+  const [postingIndex, setPostingIndex] = useState<number | null>(null);
+  const [postedIndexes, setPostedIndexes] = useState<Set<number>>(new Set());
+
+  useEffect(() => {
+    const checkLinkedIn = async () => {
+      try {
+        const res = await fetch('/api/linkedin/post');
+        const data = await res.json();
+        setLinkedinConnected(data.connected);
+        setLinkedinName(data.name);
+      } catch { /* silently fail */ }
+    };
+    checkLinkedIn();
+
+    // Check URL params for LinkedIn connection status
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('linkedin') === 'connected') {
+      setLinkedinConnected(true);
+      window.history.replaceState({}, '', '/');
+    }
+  }, []);
+
+  const handleLinkedInPost = async (text: string, hashtags: string[], index: number) => {
+    setPostingIndex(index);
+    try {
+      const fullText = text + '\n\n' + hashtags.join(' ');
+      const res = await fetch('/api/linkedin/post', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: fullText }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPostedIndexes(prev => new Set(prev).add(index));
+      } else {
+        alert('LinkedIn post failed: ' + (data.error || 'Unknown error'));
+      }
+    } catch (err) {
+      alert('Failed to post to LinkedIn');
+    } finally {
+      setPostingIndex(null);
+    }
+  };
 
   const handleGenerate = async () => {
     if (!rawThoughts && !newsSignals && !domainContext) return;
@@ -76,12 +123,28 @@ export default function AnteresDashboard() {
             </div>
             <p className="text-slate-400 text-sm">System Identity: Solo Founder Edition</p>
           </div>
-          <Link
-            href="/archive"
-            className="px-4 py-2 bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.1] rounded-lg text-sm font-medium transition-all text-slate-300 hover:text-white"
-          >
-            View Archive →
-          </Link>
+          <div className="flex items-center gap-3">
+            {linkedinConnected ? (
+              <span className="flex items-center gap-2 px-3 py-2 bg-blue-600/15 border border-blue-500/30 rounded-lg text-xs text-blue-300">
+                <Linkedin className="w-3.5 h-3.5" />
+                {linkedinName || 'Connected'}
+              </span>
+            ) : (
+              <a
+                href="/api/linkedin/auth"
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-medium transition-colors text-white"
+              >
+                <Linkedin className="w-4 h-4" />
+                Connect LinkedIn
+              </a>
+            )}
+            <Link
+              href="/archive"
+              className="px-4 py-2 bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.1] rounded-lg text-sm font-medium transition-all text-slate-300 hover:text-white"
+            >
+              View Archive →
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -195,13 +258,31 @@ export default function AnteresDashboard() {
                   <span className="px-3 py-1 bg-indigo-500/20 text-indigo-300 text-xs font-semibold rounded-full border border-indigo-500/20 shadow-inner">
                     {post.format}
                   </span>
-                  <button 
-                    onClick={() => handleCopy(post.body + '\n\n' + post.hashtags.join(' '), index)}
-                    className="p-2 hover:bg-slate-800 rounded-md text-slate-400 hover:text-white transition-colors cursor-pointer"
-                    title="Copy to clipboard"
-                  >
-                    {copiedIndex === index ? <CheckCircle2 className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
-                  </button>
+                  <div className="flex items-center gap-1">
+                    {linkedinConnected && (
+                      <button
+                        onClick={() => handleLinkedInPost(post.body, post.hashtags, index)}
+                        disabled={postingIndex === index || postedIndexes.has(index)}
+                        className="p-2 hover:bg-blue-900/30 rounded-md text-blue-400 hover:text-blue-300 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={postedIndexes.has(index) ? 'Posted to LinkedIn' : 'Post to LinkedIn'}
+                      >
+                        {postingIndex === index ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : postedIndexes.has(index) ? (
+                          <CheckCircle2 className="w-4 h-4 text-green-400" />
+                        ) : (
+                          <Linkedin className="w-4 h-4" />
+                        )}
+                      </button>
+                    )}
+                    <button 
+                      onClick={() => handleCopy(post.body + '\n\n' + post.hashtags.join(' '), index)}
+                      className="p-2 hover:bg-slate-800 rounded-md text-slate-400 hover:text-white transition-colors cursor-pointer"
+                      title="Copy to clipboard"
+                    >
+                      {copiedIndex === index ? <CheckCircle2 className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
                 
                 <div className="flex-grow whitespace-pre-wrap text-slate-300 text-sm leading-relaxed mb-6">
