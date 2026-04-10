@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     // 1. Strict Schema Validation
     const parsedInput = ContentRequestSchema.safeParse(rawBody);
     if (!parsedInput.success) {
-      return NextResponse.json({ error: 'Validation Failed', details: parsedInput.error.errors }, { status: 400 });
+      return NextResponse.json({ error: 'Validation Failed', details: parsedInput.error.issues }, { status: 400 });
     }
 
     const payload = parsedInput.data;
