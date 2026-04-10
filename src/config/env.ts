@@ -2,10 +2,10 @@ import { z } from 'zod';
 
 const envSchema = z.object({
   HF_TOKEN: z.string().min(1, 'HF_TOKEN is required').optional(),
-  GOOGLE_SERVICE_ACCOUNT_EMAIL: z.string().email('Valid GOOGLE_SERVICE_ACCOUNT_EMAIL is required').optional(),
+  GOOGLE_SERVICE_ACCOUNT_EMAIL: z.string().min(1, 'GOOGLE_SERVICE_ACCOUNT_EMAIL is required').optional(),
   GOOGLE_PRIVATE_KEY: z.string().min(1, 'GOOGLE_PRIVATE_KEY is required').optional(),
   GOOGLE_SPREADSHEETS_ID: z.string().min(1, 'GOOGLE_SPREADSHEETS_ID is required').optional(),
-  MONGODB_URI: z.string().url('A valid MongoDB URI is required').optional(),
+  MONGODB_URI: z.string().min(1, 'A valid MongoDB URI is required').optional(),
 });
 
 export const env = envSchema.parse({
