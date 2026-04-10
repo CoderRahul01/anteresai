@@ -11,12 +11,11 @@ export class SheetsService {
     // Handle private key formatting (replacing escaped newlines)
     const privateKey = env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n');
 
-    return new google.auth.JWT(
-      env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-      undefined,
-      privateKey,
-      ['https://www.googleapis.com/auth/spreadsheets']
-    );
+    return new google.auth.JWT({
+      email: env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+      key: privateKey,
+      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    });
   }
 
   public static async appendRow(row: GoogleSheetRow) {
